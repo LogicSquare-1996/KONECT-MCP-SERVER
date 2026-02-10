@@ -1,5 +1,13 @@
 # Using Konect Database MCP Server with Claude Desktop
 
+## ✅ Current Status
+
+The MCP server is **fully functional** and tested:
+- ✅ All 19 models automatically load on startup
+- ✅ Works with MongoDB Atlas and local MongoDB
+- ✅ Tested with real database queries
+- ✅ Ready for use with Claude Desktop
+
 ## Setup Instructions
 
 ### Step 1: Locate Claude Desktop Configuration File
@@ -31,12 +39,14 @@ Add or update the `mcpServers` section:
 {
   "mcpServers": {
     "konect-database": {
-      "command": "node",
+      "command": "/home/mrinal/.nvm/versions/node/v18.20.8/bin/node",
       "args": [
-        "/absolute/path/to/KONECT_MCP_Server/build/index.js"
+        "/home/mrinal/Desktop/Drivio-Application/KONECT_MCP_Server/build/index.js"
       ],
       "env": {
-        "MONGODB_CONNECTION_STRING": "mongodb://localhost:27017/starter_project"
+        "MONGODB_CONNECTION_STRING": "mongodb+srv://user:password@cluster.mongodb.net/database?retryWrites=true&w=majority",
+        "NODE_ENV": "development",
+        "SALT_ROUNDS": "10"
       }
     }
   }
@@ -44,21 +54,26 @@ Add or update the `mcpServers` section:
 ```
 
 **Important:**
-- Replace `/absolute/path/to/KONECT_MCP_Server/build/index.js` with the actual absolute path to your build file
-- Update the `MONGODB_CONNECTION_STRING` with your actual MongoDB connection string
-- Use forward slashes (`/`) even on Windows for the path
+- **command**: Use full path to Node.js (or ensure `node` is in your PATH)
+- **args**: Use absolute path to `build/index.js`
+- **MONGODB_CONNECTION_STRING**: Your actual MongoDB connection string (local or Atlas)
+- **NODE_ENV**: Required for model loading (set to "development")
+- **SALT_ROUNDS**: Required for model loading (set to "10")
+- Use forward slashes (`/`) even on Windows for paths
 
-**Example for Linux:**
+**Example Configuration:**
 ```json
 {
   "mcpServers": {
     "konect-database": {
-      "command": "node",
+      "command": "/home/mrinal/.nvm/versions/node/v18.20.8/bin/node",
       "args": [
         "/home/mrinal/Desktop/Drivio-Application/KONECT_MCP_Server/build/index.js"
       ],
       "env": {
-        "MONGODB_CONNECTION_STRING": "mongodb://localhost:27017/starter_project"
+        "MONGODB_CONNECTION_STRING": "mongodb+srv://sankar:teHOqFmpuHptO7us@cluster0.nnxgj.mongodb.net/drivio?retryWrites=true&w=majority&appName=Cluster0",
+        "NODE_ENV": "development",
+        "SALT_ROUNDS": "10"
       }
     }
   }
@@ -71,11 +86,26 @@ Close and restart Claude Desktop completely for the changes to take effect.
 
 ### Step 4: Verify the Server is Connected
 
-After restarting, you should see the `query_database` tool available in Claude Desktop. You can verify by asking Claude:
+After restarting Claude Desktop, verify the server is working:
 
-"List all available MCP tools"
+**1. Check if tool is available:**
+Ask Claude: "List all available MCP tools"
 
-Or simply try one of the example prompts below.
+You should see `query_database` in the list.
+
+**2. Test with a simple query:**
+Ask Claude: "Query the database for one user and show me the result"
+
+**3. Verify models are loaded:**
+Check Claude Desktop's console/logs. You should see:
+- `Connected to MongoDB`
+- `Models loaded successfully`
+- `Registered models: [ 'AddOn', 'ApiKey', 'BlockedDate', ... ]` (all 19 models)
+
+**4. Test successful query:**
+Try: "Show me 3 active users from the database"
+
+If you see actual data, the server is working correctly!
 
 ## Example Prompts to Use with Claude Desktop
 
@@ -199,22 +229,101 @@ Query bookings from the last month and show me how many are confirmed, pending, 
 
 5. **Combine queries**: You can ask Claude to perform multiple queries and compare results.
 
+## Testing the MCP Server
+
+### Quick Test from Terminal
+
+Before using with Claude Desktop, test the server manually:
+
+```bash
+cd /home/mrinal/Desktop/Drivio-Application/KONECT_MCP_Server
+
+# Test with your MongoDB connection string
+MONGODB_CONNECTION_STRING="mongodb+srv://user:password@cluster.mongodb.net/database" \
+NODE_ENV=development \
+SALT_ROUNDS=10 \
+echo '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"query_database","arguments":{"model":"User","query":{},"limit":1}}}' | \
+node build/index.js
+```
+
+**Expected output:**
+- `Connected to MongoDB`
+- `Models loaded successfully`
+- `Registered models: [ ... ]` (19 models)
+- JSON response with query results
+
+### Verify All Models Load
+
+Check that all 19 models are registered:
+
+```bash
+MONGODB_CONNECTION_STRING="your-connection-string" \
+NODE_ENV=development \
+SALT_ROUNDS=10 \
+node build/index.js 2>&1 | grep "Registered models"
+```
+
+You should see: `AddOn, ApiKey, BlockedDate, Booking, Calendar, Conversation, Document, Favorite, Keystore, Message, Notification, PaymentMethod, PayoutMethod, Review, Role, SupportRequest, Transaction, User, Vehicle`
+
 ## Troubleshooting
 
-**If the tool doesn't appear:**
-- Check that the path in the config file is correct and absolute
-- Verify that `build/index.js` exists and is executable
-- Check Claude Desktop's error logs
-- Ensure MongoDB connection string is correct
+### If the tool doesn't appear in Claude Desktop:
 
-**If queries fail:**
-- Verify MongoDB is running
-- Check the connection string in the config file
-- Ensure the database contains data
-- Check Claude Desktop's console for error messages
+1. **Check configuration file syntax:**
+   ```bash
+   cat ~/.config/Claude/claude_desktop_config.json | python3 -m json.tool
+   ```
+   If there's a syntax error, fix it.
 
-**Common issues:**
-- Path must be absolute (not relative)
-- Node.js must be in your PATH
-- MongoDB must be accessible from the connection string
-- Models must be loadable (check that drivio-web-service path is correct)
+2. **Verify paths are absolute:**
+   - Node.js path: `/home/mrinal/.nvm/versions/node/v18.20.8/bin/node`
+   - Server path: `/home/mrinal/Desktop/Drivio-Application/KONECT_MCP_Server/build/index.js`
+
+3. **Check file permissions:**
+   ```bash
+   ls -la /home/mrinal/Desktop/Drivio-Application/KONECT_MCP_Server/build/index.js
+   ```
+   Should be executable (`-rwxr-xr-x`)
+
+4. **Check Claude Desktop logs:**
+   - Look for error messages in Claude Desktop's console
+   - Check system logs for Node.js errors
+
+### If queries fail:
+
+1. **Verify MongoDB connection:**
+   - Test connection string manually: `mongosh "your-connection-string"`
+   - Ensure database is accessible
+   - Check network/firewall settings for MongoDB Atlas
+
+2. **Check environment variables:**
+   - `MONGODB_CONNECTION_STRING` must be set
+   - `NODE_ENV=development` is required
+   - `SALT_ROUNDS=10` is required
+
+3. **Verify models loaded:**
+   - Check Claude Desktop logs for "Models loaded successfully"
+   - Verify "Registered models" shows all 19 models
+   - If models aren't loading, check that `drivio-web-service` directory exists
+
+### Common Issues:
+
+**"Schema hasn't been registered for model"**
+- Models didn't load properly
+- Check that `drivio-web-service/config.js` exists
+- Verify `NODE_ENV` and `SALT_ROUNDS` are set
+- Ensure `drivio-web-service/keys/private.pem` and `public.pem` exist
+
+**"Cannot find module"**
+- Check that `drivio-web-service` directory is at correct path
+- From `build/loadModels.js`, path should be `../../drivio-web-service`
+
+**"MongoDB connection error"**
+- Verify connection string is correct
+- Test connection manually with `mongosh`
+- Check MongoDB Atlas IP whitelist if using Atlas
+
+**"No models registered"**
+- Check Claude Desktop logs for model loading errors
+- Verify `drivio-web-service/database/mongoose/models` exists
+- Ensure all environment variables are set correctly
