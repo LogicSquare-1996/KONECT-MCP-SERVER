@@ -71,7 +71,7 @@ Add or update the `mcpServers` section:
         "/home/mrinal/Desktop/Drivio-Application/KONECT_MCP_Server/build/index.js"
       ],
       "env": {
-        "MONGODB_CONNECTION_STRING": "mongodb+srv://sankar:teHOqFmpuHptO7us@cluster0.nnxgj.mongodb.net/drivio?retryWrites=true&w=majority&appName=Cluster0",
+        "MONGODB_CONNECTION_STRING": "Original-mongodb-connection-string",
         "NODE_ENV": "development",
         "SALT_ROUNDS": "10"
       }
